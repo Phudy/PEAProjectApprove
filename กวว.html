@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PEA DocTracker - ระบบติดตามและตรวจสอบเอกสาร</title>
+    
+    <!-- นำเข้า Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- นำเข้า Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- ตั้งค่าฟอนต์ -->
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Sarabun', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen">
+
+    <!-- Header & Role Switcher -->
+    <header class="bg-purple-800 text-white p-4 shadow-md sticky top-0 z-20">
+        <div class="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-2 text-xl font-bold">
+                <i data-lucide="shield-check" class="w-6 h-6"></i>
+                <span>ระบบติดตามและตรวจสอบเอกสารโครงการ</span>
+            </div>
+            
+            <div class="bg-purple-900 p-1 rounded-lg flex text-sm">
+                <button id="btn-role-field" onclick="App.setRole('field')" class="px-4 py-2 rounded-md transition-colors bg-white text-purple-900 font-bold shadow">
+                    <i data-lucide="building" class="w-4 h-4 inline mr-1"></i> การไฟฟ้าหน้างาน
+                </button>
+                <button id="btn-role-district" onclick="App.setRole('district')" class="px-4 py-2 rounded-md transition-colors text-purple-200 hover:text-white">
+                    <i data-lucide="list-checks" class="w-4 h-4 inline mr-1"></i> สำนักงานเขต (ตรวจสอบ)
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto p-4 py-6 space-y-6">
+        
+        <!-- ระบบแท็บ (Tab Navigation) -->
+        <div class="flex border-b border-gray-200 bg-white rounded-t-xl px-2 pt-2">
+            <button id="btn-tab-main" onclick="App.setTab('main')" class="py-3 px-6 font-semibold text-sm rounded-t-lg transition-colors flex items-center gap-2 bg-purple-50 text-purple-700 border-b-2 border-purple-700">
+                <i data-lucide="layout-dashboard" class="w-5 h-5"></i> บันทึกและตรวจสอบเอกสาร
+            </button>
+            <button id="btn-tab-history" onclick="App.setTab('history')" class="py-3 px-6 font-semibold text-sm rounded-t-lg transition-colors flex items-center gap-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50">
+                <i data-lucide="history" class="w-5 h-5"></i> ประวัติตาม WBS (ตาราง)
+            </button>
+        </div>
+
+        <!-- ========================================= -->
+        <!-- แท็บ 1: บันทึกและตรวจสอบ -->
+        <!-- ========================================= -->
+        <div id="tab-content-main" class="space-y-8 animate-in fade-in duration-300">
+            
+            <!-- ส่วนของการไฟฟ้าหน้างาน (ฟอร์มบันทึก) -->
+            <section id="form-section" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="bg-blue-50 border-b border-blue-100 p-4">
+                    <h2 class="text-lg font-bold text-blue-800 flex items-center gap-2">
+                        <i data-lucide="file-text" class="w-5 h-5"></i> นำเข้าข้อมูลงานใหม่
+                    </h2>
+                </div>
+                
+                <form id="submission-form" onsubmit="App.submitForm(event)" class="p-6 space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">1. การไฟฟ้า *</label>
+                            <select id="input-peaName" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                                <option value="">-- เลือกการไฟฟ้า --</option>
+                                <!-- ตัวเลือกจะถูกสร้างด้วย JS -->
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">2. ประเภทบันทึก *</label>
+                            <select id="input-recordType" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                                <option value="">-- เลือกประเภทบันทึก --</option>
+                                <option value="ขออนุมัติ เปิดงานใหม่">ขออนุมัติ เปิดงานใหม่</option>
+                                <option value="ขออนุมัติ งบจัดสรรงบพัสดุขาดเคลน">ขออนุมัติ งบจัดสรรงบพัสดุขาดเคลน</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">3. หมายเลขบันทึก *</label>
+                            <input type="text" id="input-recordNumber" placeholder="เช่น กฟส.นฐ. 1234/2569" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">4. หมายเลข WBS (เพิ่มได้หลายรายการ)</label>
+                        <div id="wbs-inputs-container" class="space-y-3">
+                            <div class="flex items-center gap-2 wbs-row">
+                                <input type="text" class="wbs-input flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="หมายเลข WBS ที่ 1" required />
+                            </div>
+                        </div>
+                        <button type="button" onclick="App.addWbsInput()" class="mt-3 text-sm flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium">
+                            <i data-lucide="plus" class="w-4 h-4"></i> เพิ่มหมายเลข WBS
+                        </button>
+                    </div>
+
+                    <div class="pt-4 border-t border-gray-100 flex justify-end">
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg flex items-center gap-2 transition-colors shadow-sm">
+                            <i data-lucide="send" class="w-5 h-5"></i> ส่งข้อมูลไปสำนักงานเขต
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- ส่วนแสดงรายการข้อมูล -->
+            <section class="space-y-4">
+                <h2 class="text-xl font-bold text-gray-800 border-b pb-2 flex items-center gap-2">
+                    <i data-lucide="list-checks" class="w-6 h-6 text-purple-600"></i>
+                    รายการเอกสารในระบบ (เรียงตามการส่ง)
+                </h2>
+                
+                <div id="submissions-list" class="grid gap-6">
+                    <!-- รายการจะถูกสร้างด้วย JS -->
+                </div>
+            </section>
+        </div>
+
+        <!-- ========================================= -->
+        <!-- แท็บ 2: ประวัติตาม WBS -->
+        <!-- ========================================= -->
+        <div id="tab-content-history" style="display: none;" class="animate-in fade-in duration-300">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="p-4 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gray-50">
+                    <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        <i data-lucide="history" class="w-5 h-5 text-purple-600"></i>
+                        ตารางประวัติแยกตามหมายเลข WBS
+                    </h2>
+                    
+                    <div class="flex items-center gap-3 w-full sm:w-auto">
+                        <div class="relative w-full sm:w-64">
+                            <input type="text" id="search-input" oninput="App.renderHistory()" placeholder="ค้นหา WBS, การไฟฟ้า, เลขบันทึก..." class="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500" />
+                            <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-2.5"></i>
+                        </div>
+                        <span id="search-count" class="text-sm text-gray-500 bg-white px-3 py-2 rounded-lg border border-gray-200 whitespace-nowrap shadow-sm">พบ 0 รายการ</span>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto" id="history-table-container">
+                    <!-- ตารางจะถูกสร้างด้วย JS -->
+                </div>
+            </div>
+            <p class="text-sm text-gray-500 mt-4 text-center">
+                * ข้อมูลในตารางนี้จะถูกแยก 1 บรรทัด ต่อ 1 หมายเลข WBS และเรียงลำดับตามตัวอักษรของ WBS
+            </p>
+        </div>
+
+    </main>
+
+    <!-- Custom Modal -->
+    <div id="custom-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 px-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden">
+            <div class="p-5">
+                <h3 id="modal-title" class="text-lg font-bold text-gray-900 mb-2"></h3>
+                <p id="modal-message" class="text-sm text-gray-600 mb-6"></p>
+                <div class="flex justify-end gap-3" id="modal-buttons">
+                    <button id="modal-btn-cancel" onclick="App.closeModal()" class="hidden px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">ยกเลิก</button>
+                    <button id="modal-btn-confirm" class="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors">ตกลง</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        // 1. ค่าคงที่ (Constants)
+        const PEA_LIST = [
+            "กฟส.นครปฐม", "กฟส.ดอนตูม", "กฟส.สุพรรณบุรี", "กฟส.บางปลาม้า", "กฟส.ดอนเจดีย์",
+            "กฟส.ศรีประจันต์", "กฟส.สามชุก", "กฟส.กาญจนบุรี", "กฟส.ท่าม่วง", "กฟส.พนมทวน",
+            "กฟส.ไทรโยค", "กฟส.ทองผาภูมิ", "กฟส.ด่านมะขามเตี้ย", "กฟส.ลาดหญ้า", "กฟส.สมุทรสาคร",
+            "กฟจ.สค.2(บพว.)", "กฟส.โคกขาม", "กฟส.บางน้ำจืด", "กฟส.สามพราน", "กฟส.บ้านโป่ง",
+            "กฟส.ท่ามะกา", "กฟส.ท่าเรือ", "กฟส.อู่ทอง", "กฟส.สองพี่น้อง", "กฟส.กระทุ่มแบน",
+            "กฟส.อ้อมน้อย", "กฟส.กำแพงแสน", "กฟส.นครชัยศรี", "กฟส.พุทธมณฑล", "กฟส.บ่อพลอย",
+            "กฟส.เลาขวัญ", "กฟส.เดิมบางนางบวช", "กฟส.ด่านช้าง", "กฟส.หนองหญ้าไซ", "กฟส.บางเลน"
+        ];
+
+        const CHECKLIST_1100_1400 = ["คำร้องเจ้าของที่ดิน (1100-1400)"];
+        const CHECKLIST_1500 = [
+            "คำร้องเจ้าของที่ดิน (เฉพาะ 1500)",
+            "สำเนาทะเบียนบ้าน (เฉพาะ 1500)",
+            "สำเนาบัตรประชาชน (เฉพาะ 1500)",
+            "สำเนาโฉนด/เอกสารสิทธิ์ (เฉพาะ 1500)",
+            "รูปถ่ายแนวหมุด/ใบรับรอง (เฉพาะ 1500)"
+        ];
+
+        // 2. State & Core Logic
+        const App = {
+            state: {
+                role: 'field', // 'field' หรือ 'district'
+                tab: 'main',   // 'main' หรือ 'history'
+                submissions: [],
+                modalOnConfirm: null
+            },
+
+            init() {
+                // ใส่ตัวเลือกการไฟฟ้า
+                const peaSelect = document.getElementById('input-peaName');
+                PEA_LIST.forEach(pea => {
+                    const option = document.createElement('option');
+                    option.value = pea;
+                    option.textContent = pea;
+                    peaSelect.appendChild(option);
+                });
+
+                this.renderTabs();
+                this.renderRole();
+                this.renderSubmissions();
+                lucide.createIcons();
+            },
+
+            // --- การจัดการ UI พื้นฐาน ---
+            setRole(newRole) {
+                this.state.role = newRole;
+                this.renderRole();
+                this.renderSubmissions(); // อัปเดตมุมมอง
+            },
+
+            setTab(newTab) {
+                this.state.tab = newTab;
+                this.renderTabs();
+                if (newTab === 'history') {
+                    this.renderHistory();
+                } else {
+                    this.renderSubmissions();
+                }
+            },
+
+            renderRole() {
+                const btnField = document.getElementById('btn-role-field');
+                const btnDistrict = document.getElementById('btn-role-district');
+                const formSection = document.getElementById('form-section');
+
+                if (this.state.role === 'field') {
+                    btnField.className = "px-4 py-2 rounded-md transition-colors bg-white text-purple-900 font-bold shadow";
+                    btnDistrict.className = "px-4 py-2 rounded-md transition-colors text-purple-200 hover:text-white";
+                    formSection.style.display = 'block';
+                } else {
+                    btnField.className = "px-4 py-2 rounded-md transition-colors text-purple-200 hover:text-white";
+                    btnDistrict.className = "px-4 py-2 rounded-md transition-colors bg-white text-purple-900 font-bold shadow";
+                    formSection.style.display = 'none';
+                }
+            },
+
+            renderTabs() {
+                const btnMain = document.getElementById('btn-tab-main');
+                const btnHistory = document.getElementById('btn-tab-history');
+                const contentMain = document.getElementById('tab-content-main');
+                const contentHistory = document.getElementById('tab-content-history');
+
+                if (this.state.tab === 'main') {
+                    btnMain.className = "py-3 px-6 font-semibold text-sm rounded-t-lg transition-colors flex items-center gap-2 bg-purple-50 text-purple-700 border-b-2 border-purple-700";
+                    btnHistory.className = "py-3 px-6 font-semibold text-sm rounded-t-lg transition-colors flex items-center gap-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50";
+                    contentMain.style.display = 'block';
+                    contentHistory.style.display = 'none';
+                } else {
+                    btnMain.className = "py-3 px-6 font-semibold text-sm rounded-t-lg transition-colors flex items-center gap-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50";
+                    btnHistory.className = "py-3 px-6 font-semibold text-sm rounded-t-lg transition-colors flex items-center gap-2 bg-purple-50 text-purple-700 border-b-2 border-purple-700";
+                    contentMain.style.display = 'none';
+                    contentHistory.style.display = 'block';
+                }
+            },
+
+            // --- Modal ---
+            showAlert(title, message) {
+                document.getElementById('modal-title').textContent = title;
+                document.getElementById('modal-message').textContent = message;
+                document.getElementById('modal-btn-cancel').style.display = 'none';
+                this.state.modalOnConfirm = null;
+                
+                const btnConfirm = document.getElementById('modal-btn-confirm');
+                btnConfirm.onclick = () => this.closeModal();
+
+                const modal = document.getElementById('custom-modal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            },
+
+            showConfirm(title, message, onConfirm) {
+                document.getElementById('modal-title').textContent = title;
+                document.getElementById('modal-message').textContent = message;
+                document.getElementById('modal-btn-cancel').style.display = 'block';
+                this.state.modalOnConfirm = onConfirm;
+
+                const btnConfirm = document.getElementById('modal-btn-confirm');
+                btnConfirm.onclick = () => {
+                    if (this.state.modalOnConfirm) this.state.modalOnConfirm();
+                    this.closeModal();
+                };
+
+                const modal = document.getElementById('custom-modal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            },
+
+            closeModal() {
+                const modal = document.getElementById('custom-modal');
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            },
+
+            // --- การจัดการฟอร์ม ---
+            addWbsInput() {
+                const container = document.getElementById('wbs-inputs-container');
+                const rowCount = container.children.length;
+                const div = document.createElement('div');
+                div.className = 'flex items-center gap-2 wbs-row';
+                div.innerHTML = `
+                    <input type="text" class="wbs-input flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="หมายเลข WBS" required />
+                    <button type="button" onclick="this.parentElement.remove(); App.updateWbsPlaceholders();" class="p-3 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="ลบหมายเลขนี้">
+                        <i data-lucide="trash-2" class="w-5 h-5"></i>
+                    </button>
+                `;
+                container.appendChild(div);
+                this.updateWbsPlaceholders();
+                lucide.createIcons();
+            },
+
+            updateWbsPlaceholders() {
+                const inputs = document.querySelectorAll('.wbs-input');
+                inputs.forEach((input, index) => {
+                    input.placeholder = `หมายเลข WBS ที่ ${index + 1}`;
+                });
+            },
+
+            getWbsType(wbs) {
+                const cleanWbs = wbs.trim();
+                if (cleanWbs.length >= 18) {
+                    const char18 = cleanWbs.charAt(17);
+                    if (['1', '2', '3', '4'].includes(char18)) return '1100-1400';
+                    if (char18 === '5') return '1500';
+                }
+                return '1500';
+            },
+
+            submitForm(event) {
+                event.preventDefault();
+                const peaName = document.getElementById('input-peaName').value;
+                const recordType = document.getElementById('input-recordType').value;
+                const recordNumber = document.getElementById('input-recordNumber').value;
+                
+                const wbsInputs = Array.from(document.querySelectorAll('.wbs-input'));
+                const wbsList = wbsInputs.map(input => input.value.trim()).filter(v => v !== '');
+
+                if (!peaName || !recordType || !recordNumber || wbsList.length === 0) {
+                    this.showAlert('ข้อมูลไม่ครบถ้วน', 'กรุณากรอกข้อมูลให้ครบถ้วน โดยเฉพาะการไฟฟ้า ประเภทบันทึก เลขบันทึก และอย่างน้อย 1 หมายเลข WBS');
+                    return;
+                }
+
+                const isMaterialShortage = recordType === 'ขออนุมัติ งบจัดสรรงบพัสดุขาดเคลน';
+
+                const newSubmission = {
+                    id: Date.now().toString(),
+                    peaName: peaName,
+                    recordType: recordType,
+                    recordNumber: recordNumber,
+                    timestamp: new Date().toLocaleString('th-TH'),
+                    wbsItems: wbsList.map(wbs => {
+                        const type = this.getWbsType(wbs);
+                        return {
+                            wbsNumber: wbs,
+                            type: type,
+                            checklist: isMaterialShortage ? [] : (type === '1100-1400' ? [false] : [false, false, false, false, false]),
+                            status: isMaterialShortage ? 'processing' : 'pending', 
+                            districtRecordNumber: ''
+                        };
+                    })
+                };
+
+                this.state.submissions.unshift(newSubmission);
+                
+                // รีเซ็ตฟอร์ม
+                document.getElementById('submission-form').reset();
+                document.getElementById('wbs-inputs-container').innerHTML = `
+                    <div class="flex items-center gap-2 wbs-row">
+                        <input type="text" class="wbs-input flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="หมายเลข WBS ที่ 1" required />
+                    </div>
+                `;
+
+                this.showAlert('สำเร็จ', 'ส่งข้อมูลเรียบร้อยแล้ว');
+                this.renderSubmissions();
+            },
+
+            // --- การจัดการข้อมูล ---
+            deleteSubmission(id) {
+                this.showConfirm('ยืนยันการลบ', 'คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้?', () => {
+                    this.state.submissions = this.state.submissions.filter(sub => sub.id !== id);
+                    this.renderSubmissions();
+                    if (this.state.tab === 'history') this.renderHistory();
+                });
+            },
+
+            toggleChecklist(subId, wbsIndex, checkIndex, value) {
+                if (this.state.role !== 'district') return;
+                const sub = this.state.submissions.find(s => s.id === subId);
+                if (sub) {
+                    sub.wbsItems[wbsIndex].checklist[checkIndex] = value;
+                }
+            },
+
+            confirmReview(subId, wbsIndex) {
+                const sub = this.state.submissions.find(s => s.id === subId);
+                if (sub) {
+                    const wbsItem = sub.wbsItems[wbsIndex];
+                    const isComplete = wbsItem.checklist.every(val => val === true);
+                    wbsItem.status = isComplete ? 'reviewed_complete' : 'reviewed_incomplete';
+                    this.renderSubmissions();
+                }
+            },
+
+            approveWork(subId, wbsIndex, recordInputId) {
+                const recordNumber = document.getElementById(recordInputId).value;
+                if (!recordNumber || !recordNumber.trim()) {
+                    this.showAlert('แจ้งเตือน', 'กรุณาระบุเลขบันทึกของสำนักงานเขต เพื่ออนุมัติเปิดงาน');
+                    return;
+                }
+
+                const sub = this.state.submissions.find(s => s.id === subId);
+                if (sub) {
+                    sub.wbsItems[wbsIndex].status = 'approved';
+                    sub.wbsItems[wbsIndex].districtRecordNumber = recordNumber.trim();
+                    this.renderSubmissions();
+                }
+            },
+
+            forwardToKBP(subId, wbsIndex) {
+                this.showConfirm('ยืนยันการดำเนินการ', 'ยืนยันแจ้งทับหลังเลขหนังสือเดิม ให้ กบพ.(ก3) ดำเนินการต่อ?', () => {
+                    const sub = this.state.submissions.find(s => s.id === subId);
+                    if (sub) {
+                        sub.wbsItems[wbsIndex].status = 'forwarded';
+                        this.renderSubmissions();
+                    }
+                });
+            },
+
+            resubmit(subId, wbsIndex) {
+                const sub = this.state.submissions.find(s => s.id === subId);
+                if (sub) {
+                    sub.wbsItems[wbsIndex].status = 'pending';
+                    sub.timestamp = new Date().toLocaleString('th-TH') + ' (ส่งเพิ่มเติม)';
+                    this.renderSubmissions();
+                }
+            },
+
+            // --- การแสดงผล (Renderers) ---
+            renderSubmissions() {
+                const container = document.getElementById('submissions-list');
+                
+                if (this.state.submissions.length === 0) {
+                    container.innerHTML = `
+                        <div class="bg-white p-10 text-center rounded-xl border border-dashed border-gray-300 text-gray-500">
+                            <i data-lucide="alert-circle" class="w-12 h-12 mx-auto mb-3 text-gray-300"></i>
+                            <p>ยังไม่มีข้อมูลในระบบ ลองเพิ่มข้อมูลในแท็บนี้ดูสิ</p>
+                        </div>
+                    `;
+                    lucide.createIcons();
+                    return;
+                }
+
+                let html = '';
+                this.state.submissions.forEach(sub => {
+                    const hasIncomplete = sub.wbsItems.some(w => w.status === 'reviewed_incomplete');
+                    const isMaterialShortage = sub.recordType === 'ขออนุมัติ งบจัดสรรงบพัสดุขาดเคลน';
+                    const isField = this.state.role === 'field';
+
+                    // 1. สร้างส่วนหัวของ Card
+                    let badgesHtml = sub.wbsItems.map(wbsItem => {
+                        let badgeClass = 'bg-gray-100 border-gray-200 text-gray-700';
+                        if (wbsItem.status === 'approved' || wbsItem.status === 'forwarded') badgeClass = 'bg-green-50 border-green-200 text-green-700';
+                        else if (wbsItem.status === 'reviewed_complete') badgeClass = 'bg-blue-50 border-blue-200 text-blue-700';
+                        else if (wbsItem.status === 'reviewed_incomplete') badgeClass = 'bg-red-50 border-red-200 text-red-700';
+                        else if (wbsItem.status === 'processing') badgeClass = 'bg-yellow-50 border-yellow-200 text-yellow-700';
+                        return `<span class="border px-2 py-1 rounded text-sm font-medium ${badgeClass}">${wbsItem.wbsNumber}</span>`;
+                    }).join('');
+
+                    let cardHeaderHtml = `
+                        <div class="flex-1 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="inline-block bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded font-semibold tracking-wide">${sub.peaName}</span>
+                                    <span class="inline-block text-xs px-2 py-1 rounded font-semibold tracking-wide ${isMaterialShortage ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}">${sub.recordType}</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs text-gray-500">${sub.timestamp}</span>
+                                    ${isField ? `<button onclick="App.deleteSubmission('${sub.id}')" class="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-md transition-colors" title="ลบรายการนี้"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
+                                </div>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">หมายเลขบันทึก</p>
+                                <p class="font-bold text-lg text-gray-900">${sub.recordNumber}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">หมายเลข WBS ที่ส่งมา:</p>
+                                <div class="flex flex-wrap gap-2">${badgesHtml}</div>
+                            </div>
+                        </div>
+                    `;
+
+                    // 2. สร้างส่วน WBS Items
+                    let wbsItemsHtml = sub.wbsItems.map((wbsItem, wbsIndex) => {
+                        const checklistSource = wbsItem.type === '1100-1400' ? CHECKLIST_1100_1400 : CHECKLIST_1500;
+                        const checkedCount = isMaterialShortage ? 0 : wbsItem.checklist.filter(Boolean).length;
+                        const totalChecks = isMaterialShortage ? 0 : checklistSource.length;
+                        
+                        let borderClass = (wbsItem.status === 'reviewed_incomplete') ? 'border-red-300' : (wbsItem.status === 'approved' || wbsItem.status === 'forwarded') ? 'border-green-300' : 'border-gray-200';
+                        
+                        // สร้างป้ายสถานะมุมขวาบน
+                        let statusBadge = '';
+                        if (isMaterialShortage) {
+                            if (wbsItem.status === 'forwarded') statusBadge = `<span class="flex items-center gap-1 text-sm text-green-700 font-bold bg-green-100 px-2 py-1 rounded"><i data-lucide="file-check" class="w-4 h-4"></i> แจ้ง กบพ.(ก3) ดำเนินการต่อแล้ว</span>`;
+                            else statusBadge = `<span class="flex items-center gap-1 text-sm text-blue-700 font-bold bg-blue-100 px-2 py-1 rounded"><i data-lucide="clock" class="w-4 h-4"></i> อยู่ระหว่างดำเนินการ</span>`;
+                        } else {
+                            if (wbsItem.status === 'approved') statusBadge = `<span class="flex items-center gap-1 text-sm text-green-700 font-bold bg-green-100 px-2 py-1 rounded"><i data-lucide="file-check" class="w-4 h-4"></i> เอกสารครบถ้วน / อนุมัติเปิดงานแล้ว</span>`;
+                            else if (wbsItem.status === 'reviewed_complete') statusBadge = `<span class="flex items-center gap-1 text-sm text-blue-700 font-bold bg-blue-100 px-2 py-1 rounded"><i data-lucide="check-circle" class="w-4 h-4"></i> เอกสารครบถ้วน / รออนุมัติเปิดงาน</span>`;
+                            else if (wbsItem.status === 'reviewed_incomplete') statusBadge = `<span class="flex items-center gap-1 text-sm text-red-600 font-bold bg-red-50 px-2 py-1 rounded"><i data-lucide="alert-circle" class="w-4 h-4"></i> ไม่ครบถ้วน</span>`;
+                            else statusBadge = `<span class="text-sm text-orange-600 font-medium bg-orange-50 px-2 py-1 rounded">รอตรวจสอบ (${checkedCount}/${totalChecks})</span>`;
+                        }
+
+                        let itemContentHtml = '';
+
+                        if (isMaterialShortage) {
+                            // โหมดงบจัดสรรพัสดุ
+                            let actionHtml = '';
+                            if (wbsItem.status === 'processing' && isField) actionHtml = `<p class="text-sm text-gray-500 italic py-2">ไม่ต้องตรวจสอบเอกสาร ระบบกำลังรอสำนักงานเขตดำเนินการต่อ</p>`;
+                            else if (wbsItem.status === 'forwarded') actionHtml = `<div class="bg-green-50 p-4 rounded-lg border border-green-200 text-green-800 text-sm flex items-start gap-2"><i data-lucide="check-circle" class="w-5 h-5 flex-shrink-0"></i><span><strong>ดำเนินการเรียบร้อย:</strong> แจ้งทับหลังเลขหนังสือเดิม ให้ กบพ.(ก3) ดำเนินการต่อแล้ว</span></div>`;
+                            else if (!isField && wbsItem.status === 'processing') actionHtml = `<div class="mt-2 pt-2"><button onclick="App.forwardToKBP('${sub.id}', ${wbsIndex})" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition-colors flex justify-center items-center gap-2 shadow-sm"><i data-lucide="send" class="w-4 h-4"></i>ระบุ: แจ้งทับหลังเลขหนังสือเดิม ให้ กบพ.(ก3) ดำเนินการต่อแล้ว</button></div>`;
+                            
+                            itemContentHtml = `<div class="space-y-3">${actionHtml}</div>`;
+                        } else {
+                            // โหมดปกติมี Checklist
+                            let checklistHtml = checklistSource.map((itemText, checkIndex) => {
+                                const isChecked = wbsItem.checklist[checkIndex];
+                                const canEdit = (!isField && wbsItem.status !== 'approved');
+                                return `
+                                    <label class="flex items-start gap-3 p-2 rounded-md ${canEdit ? 'hover:bg-gray-100 cursor-pointer' : 'cursor-default'} transition-colors">
+                                        <div class="pt-0.5">
+                                            <input type="checkbox" ${isChecked ? 'checked' : ''} ${!canEdit ? 'disabled' : ''} onchange="App.toggleChecklist('${sub.id}', ${wbsIndex}, ${checkIndex}, this.checked)" class="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500 ${!canEdit ? 'opacity-70' : ''}" />
+                                        </div>
+                                        <span class="text-sm ${isChecked ? 'text-gray-800' : 'text-gray-500'} ${!canEdit && !isChecked ? 'italic' : ''}">${itemText}</span>
+                                    </label>
+                                `;
+                            }).join('');
+
+                            let actionHtml = '';
+                            if (!isField && wbsItem.status !== 'approved') {
+                                if (wbsItem.status === 'reviewed_complete' && checkedCount === totalChecks) {
+                                    actionHtml = `
+                                        <div class="mt-4 pt-4 border-t border-gray-200">
+                                            <div class="space-y-3 bg-blue-50 p-4 rounded-lg border border-blue-100">
+                                                <label class="block text-sm font-semibold text-blue-800">เอกสารครบถ้วนแล้ว กรุณาระบุเลขบันทึก สนง.เขต เพื่ออนุมัติเปิดงาน</label>
+                                                <div class="flex flex-col sm:flex-row gap-2">
+                                                    <input type="text" id="approval-${sub.id}-${wbsIndex}" placeholder="เช่น กฟข. 1234/2569" class="flex-1 p-2 border border-blue-200 rounded text-sm focus:ring-2 focus:ring-blue-500" />
+                                                    <button onclick="App.approveWork('${sub.id}', ${wbsIndex}, 'approval-${sub.id}-${wbsIndex}')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium whitespace-nowrap shadow-sm">อนุมัติเปิดงาน</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                                } else {
+                                    actionHtml = `
+                                        <div class="mt-4 pt-4 border-t border-gray-200">
+                                            <button onclick="App.confirmReview('${sub.id}', ${wbsIndex})" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 rounded-lg transition-colors flex justify-center items-center gap-2">
+                                                <i data-lucide="shield-check" class="w-4 h-4"></i> ยืนยันผลการตรวจสอบ
+                                            </button>
+                                        </div>
+                                    `;
+                                }
+                            }
+
+                            if (wbsItem.status === 'approved') {
+                                actionHtml = `
+                                    <div class="mt-4 pt-4 border-t border-green-200">
+                                        <div class="bg-green-50 p-4 rounded-lg border border-green-200 flex flex-col gap-1">
+                                            <span class="text-green-800 font-bold flex items-center gap-2 text-sm"><i data-lucide="file-check" class="w-5 h-5"></i> สำนักงานเขต อนุมัติเปิดงานแล้ว</span>
+                                            <span class="text-green-700 text-sm mt-1">เลขบันทึก สนง.เขต: <strong class="text-base bg-white px-2 py-0.5 rounded border border-green-200 ml-1">${wbsItem.districtRecordNumber}</strong></span>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+
+                            if (isField && wbsItem.status === 'reviewed_incomplete') {
+                                let missingHtml = checklistSource.filter((_, i) => !wbsItem.checklist[i]).map(msg => `<li>${msg}</li>`).join('');
+                                actionHtml = `
+                                    <div class="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
+                                        <h4 class="text-red-700 font-bold flex items-center gap-1 text-sm mb-2"><i data-lucide="alert-circle" class="w-4 h-4"></i> แจ้งเตือน: เอกสารไม่ครบถ้วน</h4>
+                                        <ul class="list-disc list-inside text-xs text-red-600 space-y-1 mb-3">${missingHtml}</ul>
+                                        <button onclick="App.resubmit('${sub.id}', ${wbsIndex})" class="w-full bg-white border border-red-300 text-red-700 hover:bg-red-50 font-medium py-1.5 rounded text-sm transition-colors">แจ้งส่งเอกสารเพิ่มเติมแล้ว</button>
+                                    </div>
+                                `;
+                            }
+
+                            itemContentHtml = `
+                                <div class="space-y-2">
+                                    ${checklistHtml}
+                                    ${actionHtml}
+                                </div>
+                            `;
+                        }
+
+                        return `
+                            <div class="bg-gray-50 rounded-lg p-4 border ${borderClass}">
+                                <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-2 mb-3 border-b border-gray-200 pb-2">
+                                    <span class="font-bold text-blue-800 text-sm">${wbsItem.wbsNumber}</span>
+                                    ${statusBadge}
+                                </div>
+                                ${itemContentHtml}
+                            </div>
+                        `;
+                    }).join('');
+
+                    let footerRoleInfo = isField ? `<p class="text-xs text-gray-400 mt-4 text-right flex items-center justify-end gap-1"><i data-lucide="alert-circle" class="w-3 h-3"></i>หน้างานอ่านได้อย่างเดียว ดำเนินการโดยเขตเท่านั้น</p>` : '';
+
+                    html += `
+                        <div class="bg-white rounded-xl shadow-sm border p-5 flex flex-col md:flex-row gap-6 ${hasIncomplete ? 'border-red-300' : 'border-gray-200'}">
+                            ${cardHeaderHtml}
+                            <div class="flex-[1.5] space-y-4">
+                                <h3 class="font-semibold text-gray-800 border-b border-gray-200 pb-2">
+                                    ${isMaterialShortage ? 'สถานะการดำเนินการสำนักงานเขต (แยกตาม WBS)' : 'สถานะเอกสารสำนักงานเขต (แยกตาม WBS)'}
+                                </h3>
+                                ${wbsItemsHtml}
+                                ${footerRoleInfo}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html;
+                lucide.createIcons();
+            },
+
+            renderHistory() {
+                const term = document.getElementById('search-input').value.toLowerCase();
+                const container = document.getElementById('history-table-container');
+                const countSpan = document.getElementById('search-count');
+
+                let flatData = [];
+                this.state.submissions.forEach(sub => {
+                    sub.wbsItems.forEach((wbsItem) => {
+                        const isMaterialShortage = sub.recordType === 'ขออนุมัติ งบจัดสรรงบพัสดุขาดเคลน';
+                        const checkedCount = isMaterialShortage ? 0 : wbsItem.checklist.filter(Boolean).length;
+                        const totalChecks = isMaterialShortage ? 0 : (wbsItem.type === '1100-1400' ? 1 : 5);
+                        
+                        flatData.push({
+                            id: `${sub.id}-${wbsItem.wbsNumber}`,
+                            wbs: wbsItem.wbsNumber,
+                            peaName: sub.peaName,
+                            recordType: sub.recordType,
+                            recordNumber: sub.recordNumber,
+                            timestamp: sub.timestamp,
+                            checkedCount,
+                            totalChecks,
+                            status: wbsItem.status,
+                            districtRecordNumber: wbsItem.districtRecordNumber
+                        });
+                    });
+                });
+                
+                flatData.sort((a, b) => a.wbs.localeCompare(b.wbs));
+
+                const filteredData = flatData.filter(row => 
+                    row.wbs.toLowerCase().includes(term) ||
+                    row.peaName.toLowerCase().includes(term) ||
+                    (row.recordType && row.recordType.toLowerCase().includes(term)) ||
+                    row.recordNumber.toLowerCase().includes(term)
+                );
+
+                countSpan.textContent = `พบ ${filteredData.length} รายการ`;
+
+                if (filteredData.length === 0) {
+                    container.innerHTML = `
+                        <div class="p-10 text-center text-gray-500">
+                            <i data-lucide="alert-circle" class="w-12 h-12 mx-auto mb-3 text-gray-300"></i>
+                            <p>${flatData.length === 0 ? 'ยังไม่มีข้อมูลในระบบ' : 'ไม่พบข้อมูลที่ตรงกับการค้นหา'}</p>
+                        </div>
+                    `;
+                    lucide.createIcons();
+                    return;
+                }
+
+                let trHtml = filteredData.map(row => {
+                    const isMaterialShortage = row.recordType === 'ขออนุมัติ งบจัดสรรงบพัสดุขาดเคลน';
+                    let statusHtml = '';
+
+                    if (isMaterialShortage) {
+                        if (row.status === 'forwarded') statusHtml = `<span class="inline-flex items-center gap-1 bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap"><i data-lucide="file-check" class="w-4 h-4"></i> แจ้ง กบพ.(ก3) แล้ว</span>`;
+                        else statusHtml = `<span class="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap"><i data-lucide="clock" class="w-4 h-4"></i> อยู่ระหว่างดำเนินการ</span>`;
+                    } else {
+                        if (row.status === 'approved') statusHtml = `<span class="inline-flex items-center gap-1 bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap"><i data-lucide="file-check" class="w-4 h-4"></i> อนุมัติเปิดงานแล้ว</span>`;
+                        else if (row.status === 'reviewed_complete') statusHtml = `<span class="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap"><i data-lucide="check-circle" class="w-4 h-4"></i> รออนุมัติเปิดงาน</span>`;
+                        else if (row.status === 'reviewed_incomplete') statusHtml = `<span class="inline-flex items-center gap-1 bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap"><i data-lucide="alert-circle" class="w-4 h-4"></i> ไม่ครบถ้วน (${row.checkedCount}/${row.totalChecks})</span>`;
+                        else statusHtml = `<span class="inline-block bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap">รอตรวจสอบ (${row.checkedCount}/${row.totalChecks})</span>`;
+                    }
+
+                    return `
+                        <tr class="hover:bg-gray-50 transition-colors border-t border-gray-200">
+                            <td class="p-4 font-bold text-gray-900">${row.wbs}</td>
+                            <td class="p-4 text-gray-700">${row.peaName}</td>
+                            <td class="p-4 text-sm text-blue-700">${row.recordType}</td>
+                            <td class="p-4 text-gray-600">${row.recordNumber}</td>
+                            <td class="p-4 text-gray-800 font-medium">${row.districtRecordNumber ? `<span class="bg-gray-100 px-2 py-1 rounded border border-gray-200 text-sm">${row.districtRecordNumber}</span>` : '<span class="text-gray-400 text-sm">-</span>'}</td>
+                            <td class="p-4 text-sm text-gray-500">${row.timestamp}</td>
+                            <td class="p-4 text-center">${statusHtml}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                container.innerHTML = `
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-purple-800 text-white text-sm">
+                                <th class="p-4 font-semibold whitespace-nowrap">หมายเลข WBS</th>
+                                <th class="p-4 font-semibold whitespace-nowrap">การไฟฟ้า</th>
+                                <th class="p-4 font-semibold whitespace-nowrap">ประเภทบันทึก</th>
+                                <th class="p-4 font-semibold whitespace-nowrap">เลขบันทึกหน้างาน</th>
+                                <th class="p-4 font-semibold whitespace-nowrap">เลขบันทึก สนง.เขต</th>
+                                <th class="p-4 font-semibold whitespace-nowrap">วันเวลาที่ส่ง</th>
+                                <th class="p-4 font-semibold whitespace-nowrap text-center">สถานะเอกสาร</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${trHtml}
+                        </tbody>
+                    </table>
+                `;
+                lucide.createIcons();
+            }
+        };
+
+        // เริ่มต้นการทำงานเมื่อโหลดหน้าเว็บเสร็จ
+        document.addEventListener('DOMContentLoaded', () => {
+            App.init();
+        });
+    </script>
+</body>
+</html>
